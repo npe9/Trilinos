@@ -13,7 +13,7 @@ namespace mini_em {
 
 class OperatorRequestCallback : public Teko::RequestCallback<Teko::LinearOp> {
 public:
-   OperatorRequestCallback(const Teuchos::RCP<const panzer::GlobalEvaluationDataContainer> & gedc);
+   OperatorRequestCallback(const Teuchos::RCP<const panzer::GlobalEvaluationDataContainer> & gedc, const bool & matrix_out);
    
    // RequestCallback member functions
    ///////////////////////////////////////////
@@ -28,6 +28,8 @@ public:
 
 private:
    Teuchos::RCP<const panzer::GlobalEvaluationDataContainer> gedc_;
+
+   bool matrix_output;
 };
 
 }

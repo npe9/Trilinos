@@ -29,6 +29,8 @@ namespace mini_em {
 
 Teko::LinearOp FullMaxwellPreconditionerFactory::buildPreconditionerOperator(Teko::BlockedLinearOp & blo, Teko::BlockPreconditionerState & state) const
 {
+   Teuchos::RCP<Teuchos::TimeMonitor> tM = Teuchos::rcp(new Teuchos::TimeMonitor(*Teuchos::TimeMonitor::getNewTimer(std::string("MaxwellPreconditioner::build"))));
+
    // Check that system is right size
    int rows = Teko::blockRowCount(blo);
    int cols = Teko::blockColCount(blo);
@@ -149,7 +151,8 @@ void FullMaxwellPreconditionerFactory::initializeFromParameterList(const Teuchos
      ml_pl.set("smoother: type",           "RELAXATION");
      {
        Teuchos::ParameterList& smoother = ml_pl.sublist("smoother: params");
-       smoother.set("relaxation: type",           "Gauss-Seidel");
+       smoother.set("relaxation: type",           "MT Gauss-Seidel");
+       smoother.set("relaxation: symmetric matrix structure",         true);
        smoother.set("relaxation: sweeps",         4);
        smoother.set("relaxation: damping factor", 1.0);
      }
@@ -187,12 +190,15 @@ void FullMaxwellPreconditionerFactory::initializeFromParameterList(const Teuchos
      ml_pl.set("smoother: type",           "CHEBYSHEV");
      {
        Teuchos::ParameterList& smoother = ml_pl.sublist("smoother: params");
-       smoother.set("relaxation: sweeps",         4);
+       smoother.set("chebyshev: degree",2);
+       smoother.set("chebyshev: ratio eigenvalue",20.0);
+       smoother.set("chebyshev: min eigenvalue",1.0);
+       smoother.set("chebyshev: eigenvalue max iterations",15);
      }
      ml_pl.set("repartition: enable",true);
      ml_pl.set("repartition: partitioner","zoltan2");
      ml_pl.set("repartition: start level",2);
-     ml_pl.set("repartition: min rows per proc",1024);
+     ml_pl.set("repartition: min rows per proc",2500);
      ml_pl.set("repartition: max imbalance",1.327);
      ml_pl.set("repartition: remap parts",true);
      ml_pl.set("repartition: rebalance P and R",true);
@@ -219,11 +225,27 @@ void FullMaxwellPreconditionerFactory::initializeFromParameterList(const Teuchos
      ml_pl.set("aggregation: drop scheme", "classical");
      ml_pl.set("aggregation: drop tol",    0.0);
      ml_pl.set("smoother: pre or post",    "both");
-     ml_pl.set("smoother: type",           "RILUK");
-     ml_pl.set("smoother: overlap",        1);
+     ml_pl.set("smoother: type",           "SCHWARZ");
      {
        Teuchos::ParameterList& smoother = ml_pl.sublist("smoother: params");
-       smoother.set("fact: iluk level-of-fill", 1);
+       smoother.set("schwarz: overlap level", 1);
+       smoother.set("schwarz: combine mode", "Zero");
+       smoother.set("subdomain solver name", "RILUK");
+       {
+         Teuchos::ParameterList& subdomain = smoother.sublist("subdomain solver parameters");
+         subdomain.set("fact: iluk level-of-fill", 1);
+       }
+     }
+     ml_pl.set("repartition: enable",true);
+     ml_pl.set("repartition: partitioner","zoltan2");
+     ml_pl.set("repartition: start level",2);
+     ml_pl.set("repartition: min rows per proc",2500);
+     ml_pl.set("repartition: max imbalance",1.327);
+     ml_pl.set("repartition: remap parts",true);
+     ml_pl.set("repartition: rebalance P and R",true);
+     {
+       Teuchos::ParameterList& repartition = ml_pl.sublist("repartition: params");
+       repartition.set("algorithm","multijagged");
      }
      // add coordinates to parameter list 
      {

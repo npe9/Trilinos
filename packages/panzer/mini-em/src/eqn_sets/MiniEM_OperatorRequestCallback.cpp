@@ -13,8 +13,8 @@ using Teuchos::rcp_dynamic_cast;
 namespace mini_em {
 
 OperatorRequestCallback::
-OperatorRequestCallback(const Teuchos::RCP<const panzer::GlobalEvaluationDataContainer> & gedc)
-   : gedc_(gedc)
+OperatorRequestCallback(const Teuchos::RCP<const panzer::GlobalEvaluationDataContainer> & gedc, const bool & matrix_out)
+  : gedc_(gedc), matrix_output(matrix_out)
 {
 }
 
@@ -30,12 +30,14 @@ Teko::LinearOp OperatorRequestCallback::request(const Teko::RequestMesg & rm)
    if(name.substr(0,11)=="Mass Matrix") {
      loc = Teuchos::rcp_dynamic_cast<panzer::LOCPair_GlobalEvaluationData>(gedc_->getDataObject("Mass Matrix " + name.substr(12,name.length()-12)+" Scatter Container"),true)->getGlobalLOC();
 
-     writeOut("MassMatrix.mm", *Teuchos::rcp_dynamic_cast<panzer::ThyraObjContainer<double> >(loc,true)->get_A_th());
+     if (matrix_output)
+       writeOut("MassMatrix.mm", *Teuchos::rcp_dynamic_cast<panzer::ThyraObjContainer<double> >(loc,true)->get_A_th());
    }
    else if(name=="Weak Gradient") {
      loc = Teuchos::rcp_dynamic_cast<panzer::LOCPair_GlobalEvaluationData>(gedc_->getDataObject("Weak Gradient Scatter Container"),true)->getGlobalLOC();
 
-     writeOut("WeakGradient.mm", *Teuchos::rcp_dynamic_cast<panzer::ThyraObjContainer<double> >(loc,true)->get_A_th());
+     if (matrix_output)
+       writeOut("WeakGradient.mm", *Teuchos::rcp_dynamic_cast<panzer::ThyraObjContainer<double> >(loc,true)->get_A_th());
    }
    else {
      // bad news!
