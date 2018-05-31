@@ -64,6 +64,11 @@
 
 #include "KokkosSparse_spgemm.hpp"
 
+#ifdef HAVE_TPETRACORE_QUO
+#  include "quo.h"
+extern QUO_context quoc;
+#endif
+
 /*! \file TpetraExt_MatrixMatrix_def.hpp
 
     The implementations for the members of class Tpetra::MatrixMatrixMultiply and related non-member constructors.
@@ -2366,8 +2371,18 @@ void mult_A_B_newmatrix(
   // Either the straight-up Tpetra code (SerialNode) or the KokkosKernels one (other NGP node types)
 
   // TODO(nevans): Use threading
-  KernelWrappers<Scalar,LocalOrdinal,GlobalOrdinal,Node,lo_view_t>::mult_A_B_newmatrix_kernel_wrapper(Aview,Bview,targetMapToOrigRow,targetMapToImportRow,Bcol2Ccol,Icol2Ccol,C,Cimport,label,params);
 
+#ifdef HAVE_TPETRACORE_QUO
+  printf("I have successfully macroed\n");
+  QUO_bind_push(quoc, QUO_BIND_PUSH_OBJ, QUO_OBJ_SOCKET, -1);
+  // currently disabled in QUO
+  //QUO_bind_threads(quoc, QUO_OBJ_SOCKET, 1);
+#endif
+  KernelWrappers<Scalar,LocalOrdinal,GlobalOrdinal,Node,lo_view_t>::mult_A_B_newmatrix_kernel_wrapper(Aview,Bview,targetMapToOrigRow,targetMapToImportRow,Bcol2Ccol,Icol2Ccol,C,Cimport,label,params);
+#ifdef HAVE_TPETRACORE_QUO
+  QUO_barrier(quoc);
+  QUO_bind_pop(quoc);
+#endif 
 }
 
 
@@ -2990,7 +3005,18 @@ void jacobi_A_B_newmatrix(
   // Call the actual kernel.  We'll rely on partial template specialization to call the correct one ---
   // Either the straight-up Tpetra code (SerialNode) or the KokkosKernels one (other NGP node types)
   // TODO(nevans): Use threading
+
+#ifdef HAVE_TPETRACORE_QUO
+  QUO_bind_push(quoc, QUO_BIND_PUSH_OBJ, QUO_OBJ_SOCKET, -1);
+  // bind threads is commented out in QUO right now.
+  //QUO_bind_threads(quoc, QUO_OBJ_SOCKET, 1);
+#endif
   KernelWrappers2<Scalar,LocalOrdinal,GlobalOrdinal,Node,lo_view_t>::jacobi_A_B_newmatrix_kernel_wrapper(omega,Dinv,Aview,Bview,targetMapToOrigRow,targetMapToImportRow,Bcol2Ccol,Icol2Ccol,C,Cimport,label,params);
+
+#ifdef HAVE_TPETRACORE_QUO
+  QUO_barrier(quoc);
+  QUO_bind_pop(quoc);
+#endif
 
 }
 

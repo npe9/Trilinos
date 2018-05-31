@@ -47,7 +47,12 @@
 // 5631:  https://software.sandia.gov/bugzilla/show_bug.cgi?id=5631
 #ifdef HAVE_MPI
 #  include "mpi.h"
-#endif
+#ifdef HAVE_TEUCHOSCORE_QUO
+#  include "quo.h"
+QUO_context quoc;
+#endif // HAVE_TEUCHOSCORE_QUO
+#endif // HAVE_MPI
+
 
 #ifdef HAVE_TEUCHOSCORE_KOKKOSCORE
 #  include "Kokkos_Core.hpp"
@@ -105,7 +110,27 @@ GlobalMPISession::GlobalMPISession( int* argc, char*** argv, std::ostream *out )
     }
     std::terminate();
   }
-
+#ifdef HAVE_TEUCHOSCORE_QUO
+  int qrc = QUO_SUCCESS;
+  int qv = 0, qsv = 0;
+  quoc = NULL;
+  if (QUO_SUCCESS != (qrc = QUO_version(&qv, &qsv))) {
+    if (out) {
+      *out << "GlobalMPISession(): Error, QUO_version() returned error code="
+           << mpierr << "!=0, calling std::terminate()!\n" << quoc // use quoc
+           << std::flush;
+    }
+    std::terminate();
+  }
+  if (QUO_SUCCESS != (qrc = QUO_create(&quoc, MPI_COMM_WORLD))) {
+    if (out) {
+      *out << "GlobalMPISession(): Error, QUO_create() returned error code="
+           << mpierr << "!=0, calling std::terminate()!\n"
+           << std::flush;
+    }
+    std::terminate();
+  }
+#endif
   initialize(out); // Get NProc_ and rank_
 
   int nameLen;
